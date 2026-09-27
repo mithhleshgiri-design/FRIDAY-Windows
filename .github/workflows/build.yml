@@ -1,0 +1,46 @@
+name: Build FRIDAY Windows EXE
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract FRIDAY ZIP
+        shell: pwsh
+        run: |
+          $zip = Get-ChildItem -Filter "*.zip" | Select-Object -First 1
+          Expand-Archive -Path $zip.FullName -DestinationPath "source" -Force
+
+      - name: Locate source
+        shell: pwsh
+        run: |
+          $dir = Get-ChildItem "source" -Directory | Select-Object -First 1
+          Copy-Item "$($dir.FullName)\*" "." -Recurse -Force
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build EXE
+        shell: pwsh
+        run: |
+          Set-ExecutionPolicy Bypass -Scope Process -Force
+          ./build_windows.ps1
+
+      - name: Create ZIP
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "release\*" -DestinationPath "FRIDAY-Windows.zip" -Force
+
+      - name: Upload EXE package
+        uses: actions/upload-artifact@v4
+        with:
+          name: FRIDAY-Windows
+          path: FRIDAY-Windows.zip
